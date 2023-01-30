@@ -21,21 +21,24 @@ end_mark = '<!-- end_toc -->'
 def get_file_toc_list(path):
     """获得文件标题（.md文件链接 + .md文件内容的一级标题）"""
     file_toc_list = []
-    for file_path in os.listdir(path):
-        url_path = file_path.replace(os.sep, '/')
+    for file_name in os.listdir(path):
+        url_path = file_name.replace(os.sep, '/')
         if path != '.':
-            url_path = os.path.join(path, file_path.replace(os.sep, '/'))
-        file_name = os.path.basename(file_path)
+            url_path = os.path.join(path, url_path)
+        link_url = url_path.replace(os.sep, '/')
+
         if file_name.startswith("."):
             continue
-        if os.path.isdir(file_path):
-            file_toc_list.append(f"{' ' * 2 * url_path.count(os.sep)}" + f'- [{file_name}]({url_path})')
-            file_toc_list.extend(get_file_toc_list(file_path))
+        if os.path.isdir(url_path):
+            tmp_lst = get_file_toc_list(url_path)
+            if tmp_lst:
+                file_toc_list.append(f"{' ' * 2 * url_path.count(os.sep)}" + f'- [{file_name}]({link_url})')
+                file_toc_list.extend(tmp_lst)
             continue
 
-        if file_path.endswith('.md'):  # 只处理.md
+        if file_name.endswith('.md'):  # 只处理.md
             title = os.path.split(file_name)[1].split('.')[0]
-            file_toc_list.append(f"{' ' * 2 * url_path.count(os.sep)}" + f'- [{title}]({url_path})')
+            file_toc_list.append(f"{' ' * 2 * url_path.count(os.sep)}" + f'- [{title}]({link_url})')
             # 处理h1标题
             # for h1_in_md in get_h1_line(file_path):
             #     if h1_in_md:  # 过滤没有h1的
