@@ -170,7 +170,7 @@ http {
 user USERNAME [GROUP]
 
 user nginx lion; # 用户是nginx;组是lion
-复制代码
+
 ```
 
 #### pid
@@ -179,7 +179,7 @@ user nginx lion; # 用户是nginx;组是lion
 
 ```bash
 pid /opt/nginx/logs/nginx.pid # master主进程的的pid存放在nginx.pid的文件
-复制代码
+
 ```
 
 #### worker_rlimit_nofile_number
@@ -188,7 +188,7 @@ pid /opt/nginx/logs/nginx.pid # master主进程的的pid存放在nginx.pid的文
 
 ```bash
 worker_rlimit_nofile 20480; # 可以理解成每个worker子进程的最大连接数量。
-复制代码
+
 ```
 
 #### worker_rlimit_core
@@ -198,7 +198,7 @@ worker_rlimit_nofile 20480; # 可以理解成每个worker子进程的最大连�
 ```bash
 worker_rlimit_core 50M; # 存放大小限制
 working_directory /opt/nginx/tmp; # 存放目录
-复制代码
+
 ```
 
 #### worker_processes_number
@@ -208,7 +208,7 @@ working_directory /opt/nginx/tmp; # 存放目录
 ```bash
 worker_processes 4; # 指定具体子进程数量
 worker_processes auto; # 与当前cpu物理核心数一致
-复制代码
+
 ```
 
 #### worker_cpu_affinity
@@ -217,7 +217,7 @@ worker_processes auto; # 与当前cpu物理核心数一致
 
 ```bash
 worker_cpu_affinity 0001 0010 0100 1000; # 4个物理核心，4个worker子进程
-复制代码
+
 ```
 
 
@@ -231,7 +231,7 @@ worker_cpu_affinity 0001 0010 0100 1000; # 4个物理核心，4个worker子进�
 
 ```bash
 worker_priority -10; # 120-10=110，110就是最终的优先级
-复制代码
+
 ```
 
 `Linux` 默认进程的优先级值是120，值越小越优先； `nice` 定范围为 `-20` 到 `+19` 。
@@ -244,7 +244,7 @@ worker_priority -10; # 120-10=110，110就是最终的优先级
 
 ```bash
 worker_shutdown_timeout 5s;
-复制代码
+
 ```
 
 #### timer_resolution
@@ -253,7 +253,7 @@ worker_shutdown_timeout 5s;
 
 ```bash
 timer_resolution 100ms;
-复制代码
+
 ```
 
 在 `Linux` 系统中，用户需要获取计时器时需要向操作系统内核发送请求，有请求就必然会有开销，因此这个间隔越大开销就越小。
@@ -276,7 +276,7 @@ daemon off; # 默认是on，后台运行模式
 use method; # 不推荐配置它，让nginx自己选择
 
 method 可选值为：select、poll、kqueue、epoll、/dev/poll、eventport
-复制代码
+
 ```
 
 #### worker_connections
@@ -285,7 +285,7 @@ method 可选值为：select、poll、kqueue、epoll、/dev/poll、eventport
 
 ```bash
 worker_connections 1024 # 每个子进程的最大连接数为1024
-复制代码
+
 ```
 
 #### accept_mutex
@@ -307,7 +307,7 @@ server_name name1 name2 name3
 
 # 示例：
 server_name www.nginx.com;
-复制代码
+
 ```
 
 域名匹配的四种写法：
@@ -331,7 +331,7 @@ server_name www.nginx.com;
 121.42.11.34 doc.nginx-test.com
 121.42.11.34 www.nginx-test.cn
 121.42.11.34 fe.nginx-test.club
-复制代码
+
 ```
 
 [注意] 这里使用的是虚拟域名进行测试，因此需要配置本地 `DNS` 解析，如果使用阿里云上购买的域名，则需要在阿里云上设置好域名解析。
@@ -380,7 +380,7 @@ server {
 		index index.html;
 	}
 }
-复制代码
+
 ```
 
 3、访问分析
@@ -405,7 +405,7 @@ location /image {
 }
 
 当用户访问 www.test.com/image/1.png 时，实际在服务器找的路径是 /opt/nginx/static/image/1.png
-复制代码
+
 ```
 
 [注意] `root` 会将定义路径与 `URI` 叠加， `alias` 则只取定义路径。
@@ -420,7 +420,7 @@ location /image {
 }
 
 当用户访问 www.test.com/image/1.png 时，实际在服务器找的路径是 /opt/nginx/static/image/1.png
-复制代码
+
 ```
 
 [注意] 使用 alias 末尾一定要添加 `/` ，并且它只能位于 `location` 中。
@@ -433,7 +433,7 @@ location /image {
 location [ = | ~ | ~* | ^~ ] uri {
 	...
 }
-复制代码
+
 ```
 
 匹配规则：
@@ -470,7 +470,7 @@ server {
     index index.html index.htm;
   }
 }
-复制代码
+
 ```
 
 **location 中的反斜线**
@@ -483,7 +483,7 @@ location /test {
 location /test/ {
 	...
 }
-复制代码
+
 ```
 
 - 不带 `/` 当访问 `www.nginx-test.com/test` 时， `Nginx` 先找是否有 `test` 目录，如果有则找 `test` 目录下的 `index.html` ；如果没有 `test` 目录， `nginx` 则会找是否有 `test` 文件。
@@ -514,7 +514,7 @@ location / {
 location / {
 	return https://www.baidu.com ; # 返回重定向地址
 }
-复制代码
+
 ```
 
 #### rewrite
@@ -527,7 +527,7 @@ location / {
 上下文：server、location、if
 
 示例：rewirte /images/(.*\.jpg)$ /pic/$1; # $1是前面括号(.*\.jpg)的反向引用
-复制代码
+
 ```
 
 
@@ -559,7 +559,7 @@ server{
   
   }
 }
-复制代码
+
 ```
 
 按照这个配置我们来分析：
@@ -578,7 +578,7 @@ server{
 if($http_user_agent ~ Chrome){
   rewrite /(.*)/browser/$1 break;
 }
-复制代码
+
 ```
 
 
@@ -609,7 +609,7 @@ server {
     }
   }
 }
-复制代码
+
 ```
 
 当访问 `localhost:8080/images/` 时，会进入 `if` 判断里面执行 `rewrite` 命令。
@@ -634,7 +634,7 @@ server {
     autoindex_localtime off; # 显示的⽂件时间为⽂件的服务器时间。默认为off，显示的⽂件时间为GMT时间
   }
 }
-复制代码
+
 ```
 
 当访问 `fe.lion.com/download/` 时，会把服务器 `/opt/source/download/` 路径下的文件展示出来，如下图所示：
