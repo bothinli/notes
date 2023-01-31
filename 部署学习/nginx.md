@@ -222,7 +222,7 @@ worker_cpu_affinity 0001 0010 0100 1000; # 4个物理核心，4个worker子进�
 
 
 ![未命名文件 (1).png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/e3c23de61deb4c6391fe70e561f18aa3~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.image)
- 
+
 将每个 `worker` 子进程与特定 `CPU` 物理核心绑定，优势在于，避免同一个 `worker` 子进程在不同的 `CPU` 核心上切换，缓存失效，降低性能。但其并不能真正的避免进程切换。
 
 #### worker_priority
@@ -235,7 +235,7 @@ worker_priority -10; # 120-10=110，110就是最终的优先级
 ```
 
 `Linux` 默认进程的优先级值是120，值越小越优先； `nice` 定范围为 `-20` 到 `+19` 。
- 
+
 [备注] 应用的默认优先级值是120加上 `nice` 值等于它最终的值，这个值越小，优先级越高。
 
 #### worker_shutdown_timeout
@@ -296,7 +296,194 @@ worker_connections 1024 # 每个子进程的最大连接数为1024
 accept_mutex on # 默认是off关闭的，这里推荐打开
 ```
 
-### 3.4 server段核心参数
+### 3.4 upstream
+
+用于定义上游服务器（指的就是后台提供的应用服务器）的相关信息。
+
+![未命名文件 (2).png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/a8e5089117234f529180c8720922c2fc~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.image)
+
+```bash
+语法：upstream name {
+	...
+}
+
+上下文：http
+
+示例：
+upstream back_end_server{
+  server 192.168.100.33:8081
+}
+
+```
+
+在 `upstream` 内可使用的指令：
+
+- `server` 定义上游服务器地址；
+- `zone` 定义共享内存，用于跨 `worker` 子进程；
+- `keepalive` 对上游服务启用长连接；
+- `keepalive_requests` 一个长连接最多请求 `HTTP` 的个数；
+- `keepalive_timeout` 空闲情形下，一个长连接的超时时长；
+- `hash` 哈希负载均衡算法；
+- `ip_hash` 依据 `IP` 进行哈希计算的负载均衡算法；
+- `least_conn` 最少连接数负载均衡算法；
+- `least_time` 最短响应时间负载均衡算法；
+- `random` 随机负载均衡算法；
+
+#### server
+
+定义上游服务器地址。
+
+```bash
+语法：server address [parameters]
+
+上下文：upstream
+
+```
+
+`parameters` 可选值：
+
+- `weight=number` 权重值，默认为1；
+- `max_conns=number` 上游服务器的最大并发连接数；
+- `fail_timeout=time` 服务器不可用的判定时间；
+- `max_fails=numer` 服务器不可用的检查次数；
+- `backup` 备份服务器，仅当其他服务器都不可用时才会启用；
+- `down` 标记服务器长期不可用，离线维护；
+
+#### keepalive
+
+限制每个 `worker` 子进程与上游服务器空闲长连接的最大数量。
+
+```bash
+keepalive connections;
+
+上下文：upstream
+
+示例：keepalive 16;
+
+```
+
+#### keepalive_requests
+
+单个长连接可以处理的最多 `HTTP` 请求个数。
+
+```bash
+语法：keepalive_requests number;
+
+默认值：keepalive_requests 100;
+
+上下文：upstream
+
+```
+
+#### keepalive_timeout
+
+空闲长连接的最长保持时间。
+
+```bash
+语法：keepalive_timeout time;
+
+默认值：keepalive_timeout 60s;
+
+上下文：upstream
+
+```
+
+#### 配置实例
+
+```bash
+upstream back_end{
+	server 127.0.0.1:8081 weight=3 max_conns=1000 fail_timeout=10s max_fails=2;
+  keepalive 32;
+  keepalive_requests 50;
+  keepalive_timeout 30s;
+}
+```
+
+#### 配置负载均衡
+
+配置负载均衡主要是要使用 `upstream` 指令。默认的负载均衡策略为轮询策略。还有其它分发策略如下。
+
+**hash 算法**
+
+通过制定关键字作为 `hash key` ，基于 `hash` 算法映射到特定的上游服务器中。关键字可以包含有变量、字符串。
+
+```bash
+upstream demo_server {
+  hash $request_uri;
+  server 121.42.11.34:8020;
+  server 121.42.11.34:8030;
+  server 121.42.11.34:8040;
+}
+
+server {
+  listen 80;
+  server_name balance.lion.club;
+  
+  location /balance/ {
+  	proxy_pass http://demo_server;
+  }
+}
+
+```
+
+`hash $request_uri` 表示使用 `request_uri` 变量作为 `hash` 的 `key` 值，只要访问的 `URI` 保持不变，就会一直分发给同一台服务器。
+
+**ip_hash**
+
+根据客户端的请求 `ip` 进行判断，只要 `ip` 地址不变就永远分配到同一台主机。它可以有效解决后台服务器 `session` 保持的问题。
+
+```bash
+upstream demo_server {
+  ip_hash;
+  server 121.42.11.34:8020;
+  server 121.42.11.34:8030;
+  server 121.42.11.34:8040;
+}
+
+server {
+  listen 80;
+  server_name balance.lion.club;
+  
+  location /balance/ {
+  	proxy_pass http://demo_server;
+  }
+}
+
+```
+
+**最少连接数算法**
+
+各个 `worker` 子进程通过读取共享内存的数据，来获取后端服务器的信息。来挑选一台当前已建立连接数最少的服务器进行分配请求。
+
+```bash
+语法：least_conn;
+
+上下文：upstream;
+
+```
+
+示例：
+
+```bash
+upstream demo_server {
+  zone test 10M; # zone可以设置共享内存空间的名字和大小
+  least_conn;
+  server 121.42.11.34:8020;
+  server 121.42.11.34:8030;
+  server 121.42.11.34:8040;
+}
+
+server {
+  listen 80;
+  server_name balance.lion.club;
+  
+  location /balance/ {
+  	proxy_pass http://demo_server;
+  }
+}
+```
+
+### 3.5 server段核心参数
 
 #### server_name 指令
 
@@ -320,7 +507,7 @@ server_name www.nginx.com;
 匹配优先级：**精确匹配 > 左侧通配符匹配 > 右侧通配符匹配 > 正则表达式匹配**
 
 `server_name` 配置实例：
- 
+
 1、配置本地  `DNS` 解析 `vim /etc/hosts` （ `macOS` 系统）
 
 ```bash
@@ -335,7 +522,7 @@ server_name www.nginx.com;
 ```
 
 [注意] 这里使用的是虚拟域名进行测试，因此需要配置本地 `DNS` 解析，如果使用阿里云上购买的域名，则需要在阿里云上设置好域名解析。
- 
+
 2、配置阿里云 `Nginx` ，`vim /etc/nginx/nginx.conf` 
 
 ```bash
@@ -445,7 +632,7 @@ location [ = | ~ | ~* | ^~ ] uri {
 
 
 匹配优先级： `=` > `^~` >  `~` > `~*` > 不带任何字符。
- 
+
 实例：
 
 ```bash
@@ -641,10 +828,108 @@ server {
 
 ![image.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/38aa834307654ae08ebf5aa72507daf7~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.image)
 
+#### proxy_pass
+
+用于配置代理服务器。
+
+```bash
+语法：proxy_pass URL;
+
+上下文：location、if、limit_except
+
+示例：
+proxy_pass http://127.0.0.1:8081
+proxy_pass http://127.0.0.1:8081/proxy
+```
+
+`URL` 参数原则
+
+1. `URL` 必须以 `http` 或 `https` 开头；
+2. `URL` 中可以携带变量；
+3. `URL` 中是否带 `URI` ，会直接影响发往上游请求的 `URL` ；
+
+
+接下来让我们来看看两种常见的 `URL` 用法：
+
+1. `proxy_pass http://192.168.100.33:8081` 
+2. `proxy_pass http://192.168.100.33:8081/`
+
+这两种用法的区别就是带 `/` 和不带 `/` ，在配置代理时它们的区别可大了：
+
+- 不带 `/` 意味着 `Nginx` 不会修改用户 `URL` ，而是直接透传给上游的应用服务器；
+- 带 `/` 意味着 `Nginx` 会修改用户 `URL` ，修改方法是将 `location` 后的 `URL` 从用户 `URL` 中删除；
+
+
+不带 `/` 的用法：
+
+```bash
+location /bbs/{
+  proxy_pass http://127.0.0.1:8080;
+}
+
+```
+
+分析：
+
+1. 用户请求 `URL` ： `/bbs/abc/test.html` 
+2. 请求到达 `Nginx` 的 `URL` ： `/bbs/abc/test.html` 
+3. 请求到达上游应用服务器的 `URL` ： `/bbs/abc/test.html` 
+
+
+带 `/` 的用法：
+
+```bash
+location /bbs/{
+  proxy_pass http://127.0.0.1:8080/;
+}
+
+```
+
+分析：
+
+1. 用户请求 `URL` ： `/bbs/abc/test.html` 
+2. 请求到达 `Nginx` 的 `URL` ： `/bbs/abc/test.html` 
+3. 请求到达上游应用服务器的 `URL` ： `/abc/test.html` 
+
+
+并没有拼接上 `/bbs` ，这点和 `root` 与 `alias` 之间的区别是保持一致的。
+
+**例如：**
+
+```text
+假设下面四种情况分别用 http://192.168.1.188/proxy/test.html 进行访问。
+第一种：
+location /proxy/ {
+	proxy_pass http://127.0.0.1/;
+}
+代理到URL：http://127.0.0.1/test.html
+
+第二种（相对于第一种，最后少一个 / ）
+location /proxy/ {
+	proxy_pass http://127.0.0.1;
+}
+代理到URL：http://127.0.0.1/proxy/test.html
+
+第三种：
+location /proxy/ {
+	proxy_pass http://127.0.0.1/aaa/;
+}
+代理到URL：http://127.0.0.1/aaa/test.html
+
+第四种（相对于第三种，最后少一个 / ）
+location /proxy/ {
+	proxy_pass http://127.0.0.1/aaa;
+}
+
+代理到URL：http://127.0.0.1/aaatest.html
+```
+
+
+
 ## 4. 变量
 
 `Nginx` 提供给使用者的变量非常多，但是终究是一个完整的请求过程所产生数据， `Nginx` 将这些数据以变量的形式提供给使用者。
- 
+
 下面列举些项目中常用的变量：
 
 | 变量名               | 含义                                                         |
@@ -679,11 +964,289 @@ server {
 
 
 
+## 5. Nginx 应用核心概念
+
+代理是在服务器和客户端之间假设的一层服务器，代理将接收客户端的请求并将它转发给服务器，然后将服务端的响应转发给客户端。
+
+不管是正向代理还是反向代理，实现的都是上面的功能。
+
+![image.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/8232e3b1d3854ee2bdc743ad1f656414~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.image)
+
+### 5.1 正向代理
+
+> 正向代理，意思是一个位于客户端和原始服务器(origin server)之间的服务器，为了从原始服务器取得内容，客户端向代理发送一个请求并指定目标(原始服务器)，然后代理向原始服务器转交请求并将获得的内容返回给客户端。
 
 
+正向代理是为我们服务的，即为客户端服务的，客户端可以根据正向代理访问到它本身无法访问到的服务器资源。
+
+正向代理对我们是透明的，对服务端是非透明的，即服务端并不知道自己收到的是来自代理的访问还是来自真实客户端的访问。
+
+### 5.2 反向代理
+
+> - 反向代理*（Reverse Proxy）方式是指以代理服务器来接受internet上的连接请求，然后将请求转发给内部网络上的服务器，并将从服务器上得到的结果返回给internet上请求连接的客户端，此时代理服务器对外就表现为一个反向代理服务器。
 
 
+反向代理是为服务端服务的，反向代理可以帮助服务器接收来自客户端的请求，帮助服务器做请求转发，负载均衡等。
 
+反向代理对服务端是透明的，对我们是非透明的，即我们并不知道自己访问的是代理服务器，而服务器知道反向代理在为他服务。
+
+反向代理的优势：
+
+- 隐藏真实服务器；
+- 负载均衡便于横向扩充后端动态服务；
+- 动静分离，提升系统健壮性；
+
+
+那么“动静分离”是什么？负载均衡又是什么？
+
+### 5.3 动静分离
+
+动静分离是指在 `web` 服务器架构中，将静态页面与动态页面或者静态内容接口和动态内容接口分开不同系统访问的架构设计方法，进而提示整个服务的访问性和可维护性。
+
+![未命名文件.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/96c9221f098542ba8222565298c4038e~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.image)
+
+一般来说，都需要将动态资源和静态资源分开，由于 `Nginx` 的高并发和静态资源缓存等特性，经常将静态资源部署在 `Nginx` 上。如果请求的是静态资源，直接到静态资源目录获取资源，如果是动态资源的请求，则利用反向代理的原理，把请求转发给对应后台应用去处理，从而实现动静分离。
+
+使用前后端分离后，可以很大程度提升静态资源的访问速度，即使动态服务不可用，静态资源的访问也不会受到影响。
+
+### 5.4 负载均衡
+
+一般情况下，客户端发送多个请求到服务器，服务器处理请求，其中一部分可能要操作一些资源比如数据库、静态资源等，服务器处理完毕后，再将结果返回给客户端。
+
+这种模式对于早期的系统来说，功能要求不复杂，且并发请求相对较少的情况下还能胜任，成本也低。随着信息数量不断增长，访问量和数据量飞速增长，以及系统业务复杂度持续增加，这种做法已无法满足要求，并发量特别大时，服务器容易崩。
+
+很明显这是由于服务器性能的瓶颈造成的问题，除了堆机器之外，最重要的做法就是负载均衡。
+
+请求爆发式增长的情况下，单个机器性能再强劲也无法满足要求了，这个时候集群的概念产生了，单个服务器解决不了的问题，可以使用多个服务器，然后将请求分发到各个服务器上，将负载分发到不同的服务器，这就是负载均衡，核心是「分摊压力」。 `Nginx` 实现负载均衡，一般来说指的是将请求转发给服务器集群。
+
+举个具体的例子，晚高峰乘坐地铁的时候，入站口经常会有地铁工作人员大喇叭“请走 `B` 口， `B` 口人少车空....”，这个工作人员的作用就是负载均衡。
+![未命名文件 (3).png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/5f79f698d1fc497db14c971ea417f456~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.image)
+
+`Nginx` 实现负载均衡的策略：
+
+- 轮询策略：默认情况下采用的策略，将所有客户端请求轮询分配给服务端。这种策略是可以正常工作的，但是如果其中某一台服务器压力太大，出现延迟，会影响所有分配在这台服务器下的用户。
+- 最小连接数策略：将请求优先分配给压力较小的服务器，它可以平衡每个队列的长度，并避免向压力大的服务器添加更多的请求。
+- 最快响应时间策略：优先分配给响应时间最短的服务器。
+- 客户端 `ip` 绑定策略：来自同一个 `ip` 的请求永远只分配一台服务器，有效解决了动态网页存在的 `session` 共享问题。
+
+## 6. 配置缓存
+
+缓存可以非常有效的提升性能，因此不论是客户端（浏览器），还是代理服务器（ `Nginx` ），乃至上游服务器都多少会涉及到缓存。可见缓存在每个环节都是非常重要的。下面让我们来学习 `Nginx` 中如何设置缓存策略。
+
+### proxy_cache
+
+存储一些之前被访问过、而且可能将要被再次访问的资源，使用户可以直接从代理服务器获得，从而减少上游服务器的压力，加快整个访问速度。
+
+```bash
+语法：proxy_cache zone | off ; # zone 是共享内存的名称
+
+默认值：proxy_cache off;
+
+上下文：http、server、location
+
+```
+
+### proxy_cache_path
+
+设置缓存文件的存放路径。
+
+```bash
+语法：proxy_cache_path path [level=levels] ...可选参数省略，下面会详细列举
+
+默认值：proxy_cache_path off
+
+上下文：http
+
+```
+
+参数含义：
+
+- `path` 缓存文件的存放路径；
+- `level path` 的目录层级；
+- `keys_zone` 设置共享内存；
+- `inactive` 在指定时间内没有被访问，缓存会被清理，默认10分钟；
+
+### proxy_cache_key
+
+设置缓存文件的 `key` 。
+
+```bash
+语法：proxy_cache_key
+
+默认值：proxy_cache_key $scheme$proxy_host$request_uri;
+
+上下文：http、server、location
+
+```
+
+### proxy_cache_valid
+
+配置什么状态码可以被缓存，以及缓存时长。
+
+```bash
+语法：proxy_cache_valid [code...] time;
+
+上下文：http、server、location
+
+配置示例：proxy_cache_valid 200 304 2m;; # 说明对于状态为200和304的缓存文件的缓存时间是2分钟
+
+```
+
+### proxy_no_cache
+
+定义相应保存到缓存的条件，如果字符串参数的至少一个值不为空且不等于“ 0”，则将不保存该响应到缓存。
+
+```bash
+语法：proxy_no_cache string;
+
+上下文：http、server、location
+
+示例：proxy_no_cache $http_pragma    $http_authorization;
+
+```
+
+### proxy_cache_bypass
+
+定义条件，在该条件下将不会从缓存中获取响应。
+
+```bash
+语法：proxy_cache_bypass string;
+
+上下文：http、server、location
+
+示例：proxy_cache_bypass $http_pragma    $http_authorization;
+
+```
+
+### upstream_cache_status 变量
+
+它存储了缓存是否命中的信息，会设置在响应头信息中，在调试中非常有用。
+
+```bash
+MISS: 未命中缓存
+HIT： 命中缓存
+EXPIRED: 缓存过期
+STALE: 命中了陈旧缓存
+REVALIDDATED: Nginx验证陈旧缓存依然有效
+UPDATING: 内容陈旧，但正在更新
+BYPASS: X响应从原始服务器获取
+
+```
+
+### 配置实例
+
+我们把 `121.42.11.34` 服务器作为上游服务器，做如下配置（ `/etc/nginx/conf.d/cache.conf` ）：
+
+```bash
+server {
+  listen 1010;
+  root /usr/share/nginx/html/1010;
+  location / {
+  	index index.html;
+  }
+}
+
+server {
+  listen 1020;
+  root /usr/share/nginx/html/1020;
+  location / {
+  	index index.html;
+  }
+}
+
+```
+
+把 `121.5.180.193` 服务器作为代理服务器，做如下配置（ `/etc/nginx/conf.d/cache.conf` ）：
+
+```bash
+proxy_cache_path /etc/nginx/cache_temp levels=2:2 keys_zone=cache_zone:30m max_size=2g inactive=60m use_temp_path=off;
+
+upstream cache_server{
+  server 121.42.11.34:1010;
+  server 121.42.11.34:1020;
+}
+
+server {
+  listen 80;
+  server_name cache.lion.club;
+  location / {
+    proxy_cache cache_zone; # 设置缓存内存，上面配置中已经定义好的
+    proxy_cache_valid 200 5m; # 缓存状态为200的请求，缓存时长为5分钟
+    proxy_cache_key $request_uri; # 缓存文件的key为请求的URI
+    add_header Nginx-Cache-Status $upstream_cache_status # 把缓存状态设置为头部信息，响应给客户端
+    proxy_pass http://cache_server; # 代理转发
+  }
+}
+
+```
+
+缓存就是这样配置，我们可以在 `/etc/nginx/cache_temp` 路径下找到相应的缓存文件。
+ 
+**对于一些实时性要求非常高的页面或数据来说，就不应该去设置缓存，下面来看看如何配置不缓存的内容。**
+
+```bash
+...
+
+server {
+  listen 80;
+  server_name cache.lion.club;
+  # URI 中后缀为 .txt 或 .text 的设置变量值为 "no cache"
+  if ($request_uri ~ \.(txt|text)$) {
+  	set $cache_name "no cache"
+  }
+  
+  location / {
+    proxy_no_cache $cache_name; # 判断该变量是否有值，如果有值则不进行缓存，如果没有值则进行缓存
+    proxy_cache cache_zone; # 设置缓存内存
+    proxy_cache_valid 200 5m; # 缓存状态为200的请求，缓存时长为5分钟
+    proxy_cache_key $request_uri; # 缓存文件的key为请求的URI
+    add_header Nginx-Cache-Status $upstream_cache_status # 把缓存状态设置为头部信息，响应给客户端
+    proxy_pass http://cache_server; # 代理转发
+  }
+}
+```
+
+## 7. 配置HTTPS
+
+在学习如何配置 `HTTPS` 之前，我们先来简单回顾下 `HTTPS` 的工作流程是怎么样的？它是如何进行加密保证安全的？
+
+### HTTPS 工作流程
+
+1. 客户端（浏览器）访问 `https://www.baidu.com` 百度网站；
+2. 百度服务器返回 `HTTPS` 使用的 `CA` 证书；
+3. 浏览器验证 `CA` 证书是否为合法证书；
+4. 验证通过，证书合法，生成一串随机数并使用公钥（证书中提供的）进行加密；
+5. 发送公钥加密后的随机数给百度服务器；
+6. 百度服务器拿到密文，通过私钥进行解密，获取到随机数（公钥加密，私钥解密，反之也可以）；
+7. 百度服务器把要发送给浏览器的内容，使用随机数进行加密后传输给浏览器；
+8. 此时浏览器可以使用随机数进行解密，获取到服务器的真实传输内容；
+
+这就是 `HTTPS` 的基本运作原理，使用对称加密和非对称机密配合使用，保证传输内容的安全性。
+
+[关于HTTPS更多知识，可以查看作者的另外一篇文章《学习 HTTP 协议》](https://juejin.cn/post/6844904148601667598#heading-37)。
+
+### 配置证书
+
+下载证书的压缩文件，里面有个 `Nginx` 文件夹，把 `xxx.crt` 和 `xxx.key` 文件拷贝到服务器目录，再进行如下配置：
+
+```bash
+server {
+  listen 443 ssl http2 default_server;   # SSL 访问端口号为 443
+  server_name lion.club;         # 填写绑定证书的域名(我这里是随便写的)
+  ssl_certificate /etc/nginx/https/lion.club_bundle.crt;   # 证书地址
+  ssl_certificate_key /etc/nginx/https/lion.club.key;      # 私钥地址
+  ssl_session_timeout 10m;
+  ssl_protocols TLSv1 TLSv1.1 TLSv1.2; # 支持ssl协议版本，默认为后三个，主流版本是[TLSv1.2]
+ 
+  location / {
+    root         /usr/share/nginx/html;
+    index        index.html index.htm;
+  }
+}
+```
+
+
+如此配置后就能正常访问 `HTTPS` 版的网站了。
 
 
 
@@ -696,7 +1259,6 @@ server {
 - [万字总结，体系化带你全面认识 Nginx ！](https://juejin.cn/post/6942607113118023710)
 
 - [Nginx中文文档](https://blog.redis.com.cn/doc/)
-- [全面掌握Nginx](https://mp.weixin.qq.com/s/zMKkFHlApy8B28n_ARnGSg)
 
 
 
