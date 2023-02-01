@@ -4,6 +4,8 @@
 
 ## 1. 安装
 
+### yum安装
+
 ```bash
 $ sudo yum -y install nginx   # 安装 nginx
 $ sudo yum remove nginx  # 卸载 nginx
@@ -44,6 +46,14 @@ $ sudo yum remove nginx  # 卸载 nginx
 
 1. `/etc/nginx/conf.d/` 是子配置项存放处， `/etc/nginx/nginx.conf` 主配置文件会默认把这个文件夹中所有子配置项都引入；
 2. `/usr/share/nginx/html/` 静态文件都放在这个文件夹，也可以根据你自己的习惯放在其他地方
+
+### docker安装
+
+```bash
+docker run --name nginx -p 8100:80 -v D:/Code/data/nginx/nginx.conf:/etc/nginx/nginx.conf -v D:/Code/data/nginx/conf.d:/etc/nginx/conf.d -d nginx
+```
+
+
 
 ## 2. Nginx 常用命令
 
@@ -1577,6 +1587,7 @@ sever{
 ## 参考
 
 - [万字总结，体系化带你全面认识 Nginx ！](https://juejin.cn/post/6942607113118023710)
+- [Nginx中文文档 gitbook](https://blog.redis.com.cn/doc/)
 - [Nginx中文文档](https://blog.redis.com.cn/doc/)
 - [Nginx一网打尽：动静分离、压缩、缓存、黑白名单、跨域、高可用、性能优化...想要的这都有！](https://juejin.cn/post/7112826654291918855)
 
