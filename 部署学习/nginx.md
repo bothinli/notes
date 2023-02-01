@@ -1051,7 +1051,7 @@ location /proxy/ {
 设置缓存文件的存放路径。
 
 ```bash
-语法：proxy_cache_path path [level=levels] ...可选参数省略，下面会详细列举
+语法：proxy_cache_path path [levels=levels] [use_temp_path=on|off] keys_zone=name:size [inactive=time] [max_size=size] [manager_files=number] [manager_sleep=time] [manager_threshold=time] [loader_files=number] [loader_sleep=time] [loader_threshold=time] [purger=on|off] [purger_files=number] [purger_sleep=time] [purger_threshold=time];
 
 默认值：proxy_cache_path off
 
@@ -1061,10 +1061,22 @@ location /proxy/ {
 
 参数含义：
 
-- `path` 缓存文件的存放路径；
-- `level path` 的目录层级；
-- `keys_zone` 设置共享内存；
-- `inactive` 在指定时间内没有被访问，缓存会被清理，默认10分钟；
+- `path`：缓存的路径地址。
+- `levels`：缓存存储的层次结构，最多允许三层目录。
+- `use_temp_path`：是否使用临时目录。
+- `keys_zone`：指定一个共享内存空间来存储热点`Key`(`1M`可存储`8000`个`Key`)。
+- `inactive`：设置缓存多长时间未被访问后删除（默认是十分钟）。
+- `max_size`：允许缓存的最大存储空间，超出后会基于`LRU`算法移除缓存，`Nginx`会创建一个`Cache manager`的进程移除数据，也可以通过`purge`方式。
+- `manager_files`：`manager`进程每次移除缓存文件数量的上限。
+- `manager_sleep`：`manager`进程每次移除缓存文件的时间上限。
+- `manager_threshold`：`manager`进程每次移除缓存后的间隔时间。
+- `loader_files`：重启`Nginx`载入缓存时，每次加载的个数，默认`100`。
+- `loader_sleep`：每次载入时，允许的最大时间上限，默认`200ms`。
+- `loader_threshold`：一次载入后，停顿的时间间隔，默认`50ms`。
+- `purger`：是否开启`purge`方式移除数据。
+- `purger_files`：每次移除缓存文件时的数量。
+- `purger_sleep`：每次移除时，允许消耗的最大时间。
+- `purger_threshold`：每次移除完成后，停顿的间隔时间。
 
 ### proxy_cache_key
 
@@ -1130,7 +1142,6 @@ STALE: 命中了陈旧缓存
 REVALIDDATED: Nginx验证陈旧缓存依然有效
 UPDATING: 内容陈旧，但正在更新
 BYPASS: X响应从原始服务器获取
-
 ```
 
 ### 配置实例
@@ -1181,7 +1192,7 @@ server {
 ```
 
 缓存就是这样配置，我们可以在 `/etc/nginx/cache_temp` 路径下找到相应的缓存文件。
- 
+
 **对于一些实时性要求非常高的页面或数据来说，就不应该去设置缓存，下面来看看如何配置不缓存的内容。**
 
 ```bash
@@ -1223,7 +1234,7 @@ server {
 
 这就是 `HTTPS` 的基本运作原理，使用对称加密和非对称机密配合使用，保证传输内容的安全性。
 
-[关于HTTPS更多知识，可以查看作者的另外一篇文章《学习 HTTP 协议》](https://juejin.cn/post/6844904148601667598#heading-37)。
+[关于HTTPS更多知识，可以查看另外一篇文章《学习 HTTP 协议》](https://juejin.cn/post/6844904148601667598#heading-37)。
 
 ### 配置证书
 
@@ -1243,6 +1254,16 @@ server {
     index        index.html index.htm;
   }
 }
+
+# ---------HTTP请求转HTTPS-------------
+server {
+    # 监听HTTP默认的80端口
+    listen 80;
+    # 如果80端口出现访问该域名的请求
+    server_name www.xxx.com;
+    # 将请求改写为HTTPS（这里写你配置了HTTPS的域名）
+    rewrite ^(.*)$ https://www.xxx.com;
+}
 ```
 
 
@@ -1250,15 +1271,314 @@ server {
 
 
 
+## 8. Nginx 架构
 
+### 进程结构
+
+多进程结构 `Nginx` 的进程模型图：
+
+![未命名文件.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/1be5d62fb185454d825a56bf03e7dcd5~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.image)
+
+多进程中的 `Nginx` 进程架构如下图所示，会有一个父进程（ `Master Process` ），它会有很多子进程（ `Child Processes` ）。
+
+- ```
+  Master Process
+  ```
+
+   用来管理子进程的，其本身并不真正处理用户请求。
+
+  - 某个子进程 `down` 掉的话，它会向 `Master` 进程发送一条消息，表明自己不可用了，此时 `Master` 进程会去新起一个子进程。
+  - 某个配置文件被修改了 `Master` 进程会去通知 `work` 进程获取新的配置信息，这也就是我们所说的热部署。
+
+- 子进程间是通过共享内存的方式进行通信的。
+
+### 配置文件重载原理
+
+`reload` 重载配置文件的流程：
+
+1. 向 `master` 进程发送 `HUP` 信号（ `reload` 命令）；
+2. `master` 进程检查配置语法是否正确；
+3. `master` 进程打开监听端口；
+4. `master` 进程使用新的配置文件启动新的 `worker` 子进程；
+5. `master` 进程向老的 `worker` 子进程发送 `QUIT` 信号；
+6. 老的 `worker` 进程关闭监听句柄，处理完当前连接后关闭进程；
+7. 整个过程 `Nginx` 始终处于平稳运行中，实现了平滑升级，用户无感知；
+
+### Nginx 模块化管理机制
+
+`Nginx` 的内部结构是由核心部分和一系列的功能模块所组成。这样划分是为了使得每个模块的功能相对简单，便于开发，同时也便于对系统进行功能扩展。`Nginx` 的模块是互相独立的,低耦合高内聚。
+![image.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/7c0d0801228d409b8fc202df83a2233d~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.image)
+
+
+
+## 9. Nginx的高可用
+
+  线上如果采用单个节点的方式部署`Nginx`，难免会出现天灾人祸，比如系统异常、程序宕机、服务器断电、机房爆炸、地球毁灭....哈哈哈，夸张了。但实际生产环境中确实存在隐患问题，由于`Nginx`作为整个系统的网关层接入外部流量，所以一旦`Nginx`宕机，最终就会导致整个系统不可用，这无疑对于用户的体验感是极差的，因此也得保障`Nginx`高可用的特性。
+
+> 接下来则会通过`keepalived`的`VIP`机制，实现`Nginx`的高可用。
+>  `VIP`并不是只会员的意思，而是指`Virtual IP`，即虚拟`IP`。
+
+`keepalived`在之前单体架构开发时，是一个用的较为频繁的高可用技术，比如`MySQL、Redis、MQ、Proxy、Tomcat`等各处都会通过`keepalived`提供的`VIP`机制，实现单节点应用的高可用。
+
+### Keepalived+重启脚本+双机热备搭建
+
+①首先创建一个对应的目录并下载`keepalived`到`Linux`中并解压：
+
+```shell
+[root@localhost]# mkdir /soft/keepalived && cd /soft/keepalived
+[root@localhost]# wget https://www.keepalived.org/software/keepalived-2.2.4.tar.gz
+[root@localhost]# tar -zxvf keepalived-2.2.4.tar.gz
+```
+
+②进入解压后的`keepalived`目录并构建安装环境，然后编译并安装：
+
+```shell
+[root@localhost]# cd keepalived-2.2.4
+[root@localhost]# ./configure --prefix=/soft/keepalived/
+[root@localhost]# make && make install
+```
+
+③进入安装目录的`/soft/keepalived/etc/keepalived/`并编辑配置文件：
+
+```shell
+[root@localhost]# cd /soft/keepalived/etc/keepalived/
+[root@localhost]# vi keepalived.conf
+```
+
+④编辑主机的`keepalived.conf`核心配置文件，如下：
+
+```shell
+global_defs {
+    # 自带的邮件提醒服务，建议用独立的监控或第三方SMTP，也可选择配置邮件发送。
+    notification_email {
+        root@localhost
+    }
+    notification_email_from root@localhost
+    smtp_server localhost
+    smtp_connect_timeout 30
+    # 高可用集群主机身份标识(集群中主机身份标识名称不能重复，建议配置成本机IP)
+	router_id 192.168.12.129 
+}
+
+# 定时运行的脚本文件配置
+vrrp_script check_nginx_pid_restart {
+    # 之前编写的nginx重启脚本的所在位置
+	script "/soft/scripts/keepalived/check_nginx_pid_restart.sh" 
+    # 每间隔3秒执行一次
+	interval 3
+    # 如果脚本中的条件成立，重启一次则权重-20
+	weight -20
+}
+
+# 定义虚拟路由，VI_1为虚拟路由的标示符（可自定义名称）
+vrrp_instance VI_1 {
+    # 当前节点的身份标识：用来决定主从（MASTER为主机，BACKUP为从机）
+	state MASTER
+    # 绑定虚拟IP的网络接口，根据自己的机器的网卡配置
+	interface ens33 
+    # 虚拟路由的ID号，主从两个节点设置必须一样
+	virtual_router_id 121
+    # 填写本机IP
+	mcast_src_ip 192.168.12.129
+    # 节点权重优先级，主节点要比从节点优先级高
+	priority 100
+    # 优先级高的设置nopreempt，解决异常恢复后再次抢占造成的脑裂问题
+	nopreempt
+    # 组播信息发送间隔，两个节点设置必须一样，默认1s（类似于心跳检测）
+	advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 1111
+    }
+    # 将track_script块加入instance配置块
+    track_script {
+        # 执行Nginx监控的脚本
+		check_nginx_pid_restart
+    }
+
+    virtual_ipaddress {
+        # 虚拟IP(VIP)，也可扩展，可配置多个。
+		192.168.12.111
+    }
+}
+```
+
+⑤克隆一台之前的虚拟机作为从（备）机，编辑从机的`keepalived.conf`文件，如下：
+
+```shell
+global_defs {
+    # 自带的邮件提醒服务，建议用独立的监控或第三方SMTP，也可选择配置邮件发送。
+    notification_email {
+        root@localhost
+    }
+    notification_email_from root@localhost
+    smtp_server localhost
+    smtp_connect_timeout 30
+    # 高可用集群主机身份标识(集群中主机身份标识名称不能重复，建议配置成本机IP)
+	router_id 192.168.12.130 
+}
+
+# 定时运行的脚本文件配置
+vrrp_script check_nginx_pid_restart {
+    # 之前编写的nginx重启脚本的所在位置
+	script "/soft/scripts/keepalived/check_nginx_pid_restart.sh" 
+    # 每间隔3秒执行一次
+	interval 3
+    # 如果脚本中的条件成立，重启一次则权重-20
+	weight -20
+}
+
+# 定义虚拟路由，VI_1为虚拟路由的标示符（可自定义名称）
+vrrp_instance VI_1 {
+    # 当前节点的身份标识：用来决定主从（MASTER为主机，BACKUP为从机）
+	state BACKUP
+    # 绑定虚拟IP的网络接口，根据自己的机器的网卡配置
+	interface ens33 
+    # 虚拟路由的ID号，主从两个节点设置必须一样
+	virtual_router_id 121
+    # 填写本机IP
+	mcast_src_ip 192.168.12.130
+    # 节点权重优先级，主节点要比从节点优先级高
+	priority 90
+    # 优先级高的设置nopreempt，解决异常恢复后再次抢占造成的脑裂问题
+	nopreempt
+    # 组播信息发送间隔，两个节点设置必须一样，默认1s（类似于心跳检测）
+	advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 1111
+    }
+    # 将track_script块加入instance配置块
+    track_script {
+        # 执行Nginx监控的脚本
+		check_nginx_pid_restart
+    }
+
+    virtual_ipaddress {
+        # 虚拟IP(VIP)，也可扩展，可配置多个。
+		192.168.12.111
+    }
+}
+```
+
+⑥新建`scripts`目录并编写`Nginx`的重启脚本，`check_nginx_pid_restart.sh`：
+
+```shell
+[root@localhost]# mkdir /soft/scripts /soft/scripts/keepalived
+[root@localhost]# touch /soft/scripts/keepalived/check_nginx_pid_restart.sh
+[root@localhost]# vi /soft/scripts/keepalived/check_nginx_pid_restart.sh
+
+#!/bin/sh
+# 通过ps指令查询后台的nginx进程数，并将其保存在变量nginx_number中
+nginx_number=`ps -C nginx --no-header | wc -l`
+# 判断后台是否还有Nginx进程在运行
+if [ $nginx_number -eq 0 ];then
+    # 如果后台查询不到`Nginx`进程存在，则执行重启指令
+    /soft/nginx/sbin/nginx -c /soft/nginx/conf/nginx.conf
+    # 重启后等待1s后，再次查询后台进程数
+    sleep 1
+    # 如果重启后依旧无法查询到nginx进程
+    if [ `ps -C nginx --no-header | wc -l` -eq 0 ];then
+        # 将keepalived主机下线，将虚拟IP漂移给从机，从机上线接管Nginx服务
+        systemctl stop keepalived.service
+    fi
+fi
+```
+
+⑦编写的脚本文件需要更改编码格式，并赋予执行权限，否则可能执行失败：
+
+```shell
+[root@localhost]# vi /soft/scripts/keepalived/check_nginx_pid_restart.sh
+
+:set fileformat=unix # 在vi命令里面执行，修改编码格式
+:set ff # 查看修改后的编码格式
+
+[root@localhost]# chmod +x /soft/scripts/keepalived/check_nginx_pid_restart.sh
+```
+
+⑧由于安装`keepalived`时，是自定义的安装位置，因此需要拷贝一些文件到系统目录中：
+
+```shell
+[root@localhost]# mkdir /etc/keepalived/
+[root@localhost]# cp /soft/keepalived/etc/keepalived/keepalived.conf /etc/keepalived/
+[root@localhost]# cp /soft/keepalived/keepalived-2.2.4/keepalived/etc/init.d/keepalived /etc/init.d/
+[root@localhost]# cp /soft/keepalived/etc/sysconfig/keepalived /etc/sysconfig/
+```
+
+⑨将`keepalived`加入系统服务并设置开启自启动，然后测试启动是否正常：
+
+```shell
+[root@localhost]# chkconfig keepalived on
+[root@localhost]# systemctl daemon-reload
+[root@localhost]# systemctl enable keepalived.service
+[root@localhost]# systemctl start keepalived.service
+
+其他命令：
+systemctl disable keepalived.service # 禁止开机自动启动
+systemctl restart keepalived.service # 重启keepalived
+systemctl stop keepalived.service # 停止keepalived
+tail -f /var/log/messages # 查看keepalived运行时日志
+```
+
+⑩最后测试一下`VIP`是否生效，通过查看本机是否成功挂载虚拟`IP`：
+
+```shell
+[root@localhost]# ip addr
+```
+
+![image-20230201105251601](nginx.assets/image-20230201105251601.png)
+
+> 从上图中可以明显看见虚拟`IP`已经成功挂载，但另外一台机器`192.168.12.130`并不会挂载这个虚拟`IP`，只有当主机下线后，作为从机的`192.168.12.130`才会上线，接替`VIP`。最后测试一下外网是否可以正常与`VIP`通信，即在`Windows`中直接`ping VIP`：
+
+![image-20230201105307630](nginx.assets/image-20230201105307630.png)
+
+外部通过`VIP`通信时，也可以正常`Ping`通，代表虚拟`IP`配置成功。
+
+### Nginx高可用性测试
+
+  经过上述步骤后，`keepalived`的`VIP`机制已经搭建成功，在上个阶段中主要做了几件事：
+
+- 一、为部署`Nginx`的机器挂载了`VIP`。
+- 二、通过`keepalived`搭建了主从双机热备。
+- 三、通过`keepalived`实现了`Nginx`宕机重启。
+
+由于前面没有域名的原因，因此最初`server_name`配置的是当前机器的`IP`，所以需稍微更改一下`nginx.conf`的配置：
+
+```shell
+sever{
+    listen    80;
+    # 这里从机器的本地IP改为虚拟IP
+	server_name 192.168.12.111;
+	# 如果这里配置的是域名，那么则将域名的映射配置改为虚拟IP
+}
+```
+
+最后来实验一下效果： 
+
+![image-20230201105339842](nginx.assets/image-20230201105339842.png)
+
+> 在上述过程中，首先分别启动了`keepalived、nginx`服务，然后通过手动停止`nginx`的方式模拟了`Nginx`宕机情况，过了片刻后再次查询后台进程，我们会发现`nginx`依旧存活。
+
+从这个过程中不难发现，`keepalived`已经为我们实现了`Nginx`宕机后自动重启的功能，那么接着再模拟一下服务器出现故障时的情况：
+![image-20230201105415442](nginx.assets/image-20230201105415442.png)
+
+> 在上述过程中，我们通过手动关闭`keepalived`服务模拟了机器断电、硬件损坏等情况（因为机器断电等情况=主机中的`keepalived`进程消失），然后再次查询了一下本机的`IP`信息，很明显会看到`VIP`消失了！
+
+现在再切换到另外一台机器：`192.168.12.130`来看看情况： 
+
+![image-20230201105444380](nginx.assets/image-20230201105444380.png)
+
+> 此刻我们会发现，在主机`192.168.12.129`宕机后，VIP自动从主机飘移到了从机`192.168.12.130`上，而此时客户端的请求就最终会来到`130`这台机器的`Nginx`上。
+
+**最终，利用`Keepalived`对`Nginx`做了主从热备之后，无论是遇到线上宕机还是机房断电等各类故障时，都能够确保应用系统能够为用户提供`7x24`小时服务。**
 
 
 
 ## 参考
 
 - [万字总结，体系化带你全面认识 Nginx ！](https://juejin.cn/post/6942607113118023710)
-
 - [Nginx中文文档](https://blog.redis.com.cn/doc/)
+- [Nginx一网打尽：动静分离、压缩、缓存、黑白名单、跨域、高可用、性能优化...想要的这都有！](https://juejin.cn/post/7112826654291918855)
 
 
 
