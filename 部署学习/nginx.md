@@ -1587,7 +1587,7 @@ sever{
 ## 参考
 
 - [万字总结，体系化带你全面认识 Nginx ！](https://juejin.cn/post/6942607113118023710)
-- [Nginx中文文档 gitbook](https://blog.redis.com.cn/doc/)
+- [Nginx中文文档 gitbook](https://wizardforcel.gitbooks.io/nginx-doc/content/index.html)
 - [Nginx中文文档](https://blog.redis.com.cn/doc/)
 - [Nginx一网打尽：动静分离、压缩、缓存、黑白名单、跨域、高可用、性能优化...想要的这都有！](https://juejin.cn/post/7112826654291918855)
 
