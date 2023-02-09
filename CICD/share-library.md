@@ -38,7 +38,7 @@
 | BUILD_NUMBER    | 当前构建号                                                   |
 | JOB_NAME        | 流水线全名，如果有文件夹，会包含文件夹。如：foo/bar          |
 | JOB_BASE_NAME   | 流水线名称，such as "foo" for "bar/foo".                     |
-| BUILD_TAG       | 构建标记 格式如 jenkins-${JOB_NAME}-${BUILD_NUMBER} 常用于保存构建中文件的文件名前缀 |
+| BUILD_TAG       | 构建标记 格式如 jenkins-{JOB_NAME}-{BUILD_NUMBER} 常用于保存构建中文件的文件名前缀 |
 | EXECUTOR_NUMBER | 标识执行此构建的当前执行器（同一机器的执行器之间）的唯一编号 |
 | JENKINS_URL     | jenkins服务地址                                              |
 | NODE_NAME       | 构建机器名称                                                 |
