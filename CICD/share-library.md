@@ -2,17 +2,158 @@
 
 ## 1. 介绍
 
+如果你经常使用 Jenkins Pipeline 一定会遇到多个不同流水线中有大量重复代码的情况，很多时候为了方便我们都是直接复制粘贴到不同的管道中去的，但是长期下去这些代码的维护就会越来越麻烦。为了解决这个问题，Jenkins 中提供了共享库的概念来解决重复代码的问题，我们只需要将公共部分提取出来，然后就可以在所有的 Pipeline 中引用这些共享库下面的代码了。
+
+共享库（shared library）是一些**独立的 Groovy 脚本的集合**，**目的就是将一些反复使用的模块进行封装**，比如拉**取代码模块，邮件通知模块**，**这样使得你的Jenkinsfile看起来更加简洁，减少代码量。**我们可以在运行 Pipeline 的时候去获取这些共享库代码。使用共享库最好的方式同样是把代码使用 Git 仓库进行托管，这样我们就可以进行版本化管理了。
+
 ## 2. 使用
 
-## 3. 语法
+使用共享库一般只需要3个步骤即可：
+
+- 首先创建 Groovy 脚本，添加到 Git 仓库中
+- 然后在 Jenkins 中配置将共享库添加到 Jenkins 中来
+- 最后，在我们的流水线中导入需要使用的共享库：`@Library('your-shared-library')`，这样就可以使用共享库中的代码了。
+
+### 2.1 目录结构
+
+需要创建一个git仓库，并且目录结构如下
+
+共享库的目录结构如下:
+
+```reStructuredText
+(project root)
++- src                     # Groovy source files
+|   +- org
+|       +- foo
+|           +- Bar.groovy  # for org.foo.Bar class
++- vars
+|   +- foo.groovy          # 定义一个名为 foo 的步骤
+|   +- foo.txt             # 为 foo 步骤做解析，也可以说是帮助文档
++- resources               # 资源文件夹
+|   +- org
+|       +- foo
+|           +- bar.json    # static helper data for org.foo.Bar
+```
+
+`src` 目录应该看起来像标准的 Java 源目录结构。当执行流水线时，该目录被添加到类路径下。
+
+`vars` 目录定义可从流水线访问的全局变量的脚本。 每个 `*.groovy` 文件的基名应该是一个 Groovy (~ Java) 标识符, 通常是 `camelCased`。 匹配 `*.txt`, 如果存在, 可以包含文档, 通过系统的配置标记格式化从处理 (所以可能是 HTML, Markdown 等，虽然 `txt` 扩展是必需的)。
+
+这些目录中的 Groovy 源文件 在脚本化流水线中的 “CPS transformation” 一样。
+
+`resources` 目录允许从外部库中使用 `libraryResource` 步骤来加载有关的非 Groovy 文件。 目前，内部库不支持该特性。
+
+根目录下的其他目录被保留下来以便于将来的增强。
+
+### 2.2 共享库内容
+
+在共享库中一般会有两种通用的代码：
+
+- **Steps**：这些 Steps 在 Jenkins 中被称为**全局变量**，我们可以在所有的 Jenkins Pipeline 中使用这些自定义的 Steps。
+
+比如，我们可以编写一个标准的 Step 来部署应用或者发送消息通知等，我们就可以将代码添加到 `vars/YourStepName.groovy` 文件中，然后实现一个 `call` 函数即可：
+
+```groovy
+#!/usr/bin/env groovy
+// vars/YourStepName.groovy
+
+def call() {
+  // Do something here...
+}
+```
+
+- **其他通用代码**：我们可以在这里面添加一些帮助类，还可以定义整个流水线中使用的静态常量等。
+
+这些代码需要放在 `src/your/package/name` 目录下面，然后就可以使用常规的 Groovy 语法了，例如：
+
+```groovy
+#!/usr/bin/env groovy
+// com/qikqiak/GlobalVars.groovy
+package com.bothin
+
+class GlobalVars {
+   static String foo = "bar"
+}
+```
+
+我们可以在 Jenkins Pipeline 中使用 `import` 导入上面的类，并引用其中的静态变量，比如 `GlobalVars.foo`。
+
+### 2.3 设置全局共享库
+
+通过*系统管理 > 系统配置 > Global Pipeline Libraries*去添加共享库，可以添加多个。
+
+![image-20230210161048040](share-library.assets/image-20230210161048040.png)
+
+### 2.4 示例
+
+在`vars`目录下新建一个step `vars/sayHi.groovy`
+
+```groovy
+def call(String name='bothin') {
+  echo "Hello, ${name}."
+}
+```
+
+创建一个名为 `src/com/bothin/GlobalVars.groovy` 的文件，文件内容如下所示：
+
+```groovy
+#!/usr/bin/env groovy
+package com.bothin
+
+class GlobalVars {
+  static String foo = "bar"
+
+  // 在 Pipeline 中可以引用这里的静态变量：
+  // 
+  // import com.bothin.GlobalVars
+  // println GlobalVars.foo
+}
+```
+
+
+在jenkinsfile中使用
+```jenkinsfile
+@Library('my-lib@master') _
+import com.bothin.GlobalVars
+
+pipeline {
+    agent none
+    stage ('Example') {
+        steps {
+             script { 
+                 sayHi "jack"
+                 echo GlobalVars.foo
+             }
+        }
+    }
+}
+```
+
+
+
+## 3. 步骤语法
 
 ### 3.1 内置变量
 
 #### Jenkins
 
-`Jenkins`是Jenkins中的一个中心类，可以通过这个类来操作jenkins的一些资源。
+`Jenkins`是Jenkins中的一个中心类，可以通过这个类来操作jenkins的一些资源。通过`Jenkins.get()`或`Jenkins.getInstanceOrNull()`可以获取操作实例
 
 > 类api [jenkins.model.Jenkins](https://javadoc.jenkins-ci.org/jenkins/model/Jenkins.html)
+
+
+
+**常用实例方法**
+
+| 方法名                                                       | 返回值                                                       | 说明                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------ |
+| **[getComputer](https://javadoc.jenkins-ci.org/jenkins/model/Jenkins.html#getComputer(java.lang.String))**(String name) | [Computer](https://javadoc.jenkins-ci.org/hudson/model/Computer.html) | 获取slave机器实例        |
+| **[getNode](https://javadoc.jenkins-ci.org/jenkins/model/Jenkins.html#getNode(java.lang.String))**(String name) | [Node](https://javadoc.jenkins-ci.org/hudson/model/Node.html) | 获取给定名称的代理节点   |
+| **[getPluginManager](https://javadoc.jenkins-ci.org/jenkins/model/Jenkins.html#getPluginManager())**() | [PluginManager](https://javadoc.jenkins-ci.org/hudson/PluginManager.html) | 获取插件管理器           |
+| **[getPlugin](https://javadoc.jenkins-ci.org/jenkins/model/Jenkins.html#getPlugin(java.lang.String))**(String shortName) | [Plugin](https://javadoc.jenkins-ci.org/hudson/Plugin.html)  | 从其短名称获取插件对象。 |
+| **[getQueue](https://javadoc.jenkins-ci.org/jenkins/model/Jenkins.html#getQueue())**() | [Queue](https://javadoc.jenkins-ci.org/hudson/model/Queue.html) | 获取构建等待队列         |
+
+
 
 #### env
 
@@ -26,7 +167,7 @@
 
 | 方法名                                                       | 返回值                                                       | 说明                                             |
 | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------ |
-| **[getProperty](https://javadoc.jenkins.io/plugin/workflow-cps/org/jenkinsci/plugins/workflow/cps/EnvActionImpl.html#getProperty(java.lang.String))**(StringpropertyName) | String                                                       | 获取环境变量，也可以通过`env.`加环境变量名获取   |
+| **[getProperty](https://javadoc.jenkins.io/plugin/workflow-cps/org/jenkinsci/plugins/workflow/cps/EnvActionImpl.html#getProperty(java.lang.String))**(String propertyName) | String                                                       | 获取环境变量，也可以通过`env.xxx`获取            |
 | **[setProperty](https://javadoc.jenkins.io/plugin/workflow-cps/org/jenkinsci/plugins/workflow/cps/EnvActionImpl.html#setProperty(java.lang.String,java.lang.Object))**(String propertyName, Object newValue) | void                                                         | 添加环境变量，也可以通过 `env.xxx = "xxx"`来设置 |
 | **[getEnvironment](https://javadoc.jenkins.io/plugin/workflow-cps/org/jenkinsci/plugins/workflow/cps/EnvActionImpl.html#getEnvironment())**() | [EnvVars](https://javadoc.jenkins.io/hudson/EnvVars.html?is-external=true) | 获取所有环境变量                                 |
 
@@ -80,4 +221,88 @@ if (params.getOrDefault('BOOLEAN_PARAM_NAME', true)) {doSomething()}
 通过这个变量可以访问当前构建的一些信息。
 
 > 类api [org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper](https://javadoc.jenkins.io/plugin/workflow-support/org/jenkinsci/plugins/workflow/support/steps/build/RunWrapper.html)
+
+
+
+
+
+### 3.2 常用类
+
+#### FilePath
+
+需要通过FilePath类才可以操作slave节点机器上的文件
+
+> 直接使用File操作的文件是Jenkins master上的机器
+
+```groovy
+// 创建FilePath
+def createFilePath(path) {
+	if (env['NODE_NAME'] == null) {
+		error "envvar NODE_NAME is not set, probably not inside an node {} or running an older version of Jenkins!"
+	} else if (env['NODE_NAME'].equals("master")) {
+		return new FilePath(new File(path))
+	} else {
+		return new FilePath(Jenkins.getInstance().getComputer(env['NODE_NAME']).getChannel(), path)
+	}
+}
+```
+
+
+
+### 3.3 引用第三方jar包
+
+可以通过`@Grab`引用
+
+```groovy
+// 通过 : 分隔传入group、module和version
+@Grab('org.apache.commons:commons-math3:3.4.1')
+import org.apache.commons.math3.primes.Primes
+
+void parallelize(int count) {
+  if (!Primes.isPrime(count)) {
+    error "${count} was not prime"
+  }
+  // …
+}
+```
+
+```groovy
+@Grab(group='commons-net', module='commons-net', version='2.0')
+import org.apache.commons.net.ftp.FTPClient
+
+// 上传文件到ftp
+def call(String path, String target) {
+    File file = new File(path)
+    println("Name: " + file.name)
+    println("Parent: " + file.parent)
+
+    println("About to connect....");
+    new FTPClient().with {
+        connect "xxx_ftp.com"
+        enterLocalPassiveMode()
+        login "xx_username", "xxx_pwd"
+        changeWorkingDirectory file.parent
+        def incomingFile = new File(file.name)
+        incomingFile.withOutputStream { ostream -> retrieveFile file.name, ostream }
+        disconnect()
+    }
+    println("                      ...Done.");
+
+    if(isUnix()){
+        sh("mv ${file.name} ${target}")
+    }else{
+        bat("mv ${file.name} ${target}")
+    }
+}
+```
+
+
+
+
+
+
+
+## 4. 参考
+
+- [官方文档](https://www.jenkins.io/zh/doc/book/pipeline/shared-libraries/)
 
