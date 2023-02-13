@@ -222,19 +222,59 @@ if (params.getOrDefault('BOOLEAN_PARAM_NAME', true)) {doSomething()}
 
 > 类api [org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper](https://javadoc.jenkins.io/plugin/workflow-support/org/jenkinsci/plugins/workflow/support/steps/build/RunWrapper.html)
 
+**常用方法**
 
+| 方法名                                                       | 返回值                                                       | 说明                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| **[getId](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true#getId())**() | String                                                       | 获取构建号                                                   |
+| getResult()                                                  | String                                                       | 返回此次构建的结果                                           |
+| getDisplayName()                                             | String                                                       | 获取展示的构建名称，如：\#28                                 |
+| getFullDisplayName()                                         | String                                                       | 获取全部展示名称，如：cicd » cicd-pipeline-test #28          |
+| getFullProjectName()                                         | String                                                       | 获取全部流水线名称，如: 9/cicd-pipeline-test                 |
+| **[getRawBuild](https://javadoc.jenkins.io/plugin/workflow-support/org/jenkinsci/plugins/workflow/support/steps/build/RunWrapper.html#getRawBuild--)**() | [Run](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true)<?,?> | 访问最核心的构建信息，pipline类型流水线的实现为[WorkflowRun](https://javadoc.jenkins.io/plugin/workflow-job/org/jenkinsci/plugins/workflow/job/WorkflowRun.html) |
+
+[WorkflowRun](https://javadoc.jenkins.io/plugin/workflow-job/org/jenkinsci/plugins/workflow/job/WorkflowRun.html)**常用方法**
+
+| 方法名                                                       | 返回值                                                       | 说明                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | -------------------------------------------- |
+| **[getId](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true#getId())**() | String                                                       | 获取构建号                                   |
+| **[getLog](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true#getLog())**() | String                                                       | （Deprecated）获取全部构建日志               |
+| **[getLog](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true#getLog(int))**(int maxLines) | `List<String>`                                               | 获取最多行数日志                             |
+| **[getLogInputStream](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true#getLogInputStream())**() | [InputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/InputStream.html?is-external=true) | 获取日志文件的输入流                         |
+| **[getOneOffExecutor](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true#getOneOffExecutor())**() | [Executor](https://javadoc.jenkins.io/hudson/model/Executor.html) | 如果当前在构建中，则返回构建这个作业的执行器 |
+| **[getResult](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true#getResult())**() | [Result](https://javadoc.jenkins.io/hudson/model/Result.html) | 返回此次构建的结果                           |
 
 
 
 ### 3.2 常用类
 
+#### Computer
+
+代表远程构建的机器，获取当前执行构建的机器 `Jenkins.get().getComputer(env.NODE_NAME)`
+
+> 类api [hudson.model.Computer](https://javadoc.jenkins-ci.org/hudson/model/Computer.html)
+
+| 方法名                                                       | 返回值                                                       | 说明                           |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------ |
+| getHostName()                                                | String                                                       | 返回机器的host                 |
+| **[getMonitorData](https://javadoc.jenkins-ci.org/hudson/model/Computer.html#getMonitorData())**() | Map<String, Object>                                          | 获取机器的一些监控数据         |
+| **[getAllExecutors](https://javadoc.jenkins-ci.org/hudson/model/Computer.html#getAllExecutors())**() | `List<Executor>`                                             | 获取所有执行器                 |
+| **[getChannel](https://javadoc.jenkins-ci.org/hudson/model/Computer.html#getChannel())**() | abstract hudson.remoting.VirtualChannel                      | 获取用来执行构建机器程序的通道 |
+| **[getTiedJobs](https://javadoc.jenkins-ci.org/hudson/model/Computer.html#getTiedJobs())**() | [List](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/List.html?is-external=true) < [AbstractProject](https://javadoc.jenkins-ci.org/hudson/model/AbstractProject.html) > | 获取绑定在此节点上的项目       |
+
+
+
 #### FilePath
 
 需要通过FilePath类才可以操作slave节点机器上的文件
 
-> 直接使用File操作的文件是Jenkins master上的机器
+> 误区：直接使用File操作的文件是Jenkins master上的机器
+>
+> 类api [hudson.FilePath](https://javadoc.jenkins.io/hudson/FilePath.html)
 
 ```groovy
+import hudson.FilePath
+
 // 创建FilePath
 def createFilePath(path) {
 	if (env['NODE_NAME'] == null) {
@@ -242,7 +282,7 @@ def createFilePath(path) {
 	} else if (env['NODE_NAME'].equals("master")) {
 		return new FilePath(new File(path))
 	} else {
-		return new FilePath(Jenkins.getInstance().getComputer(env['NODE_NAME']).getChannel(), path)
+		return new FilePath(Jenkins.get().getComputer(env['NODE_NAME']).getChannel(), path)
 	}
 }
 ```
