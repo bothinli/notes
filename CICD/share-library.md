@@ -231,7 +231,7 @@ if (params.getOrDefault('BOOLEAN_PARAM_NAME', true)) {doSomething()}
 | getDisplayName()                                             | String                                                       | 获取展示的构建名称，如：\#28                                 |
 | getFullDisplayName()                                         | String                                                       | 获取全部展示名称，如：cicd » cicd-pipeline-test #28          |
 | getFullProjectName()                                         | String                                                       | 获取全部流水线名称，如: 9/cicd-pipeline-test                 |
-| **[getRawBuild](https://javadoc.jenkins.io/plugin/workflow-support/org/jenkinsci/plugins/workflow/support/steps/build/RunWrapper.html#getRawBuild--)**() | [Run](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true)<?,?> | 访问最核心的构建信息，pipline类型流水线的实现为[WorkflowRun](https://javadoc.jenkins.io/plugin/workflow-job/org/jenkinsci/plugins/workflow/job/WorkflowRun.html) |
+| **[getRawBuild](https://javadoc.jenkins.io/plugin/workflow-support/org/jenkinsci/plugins/workflow/support/steps/build/RunWrapper.html#getRawBuild--)**() | [Run](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true)< ?,?> | 访问最核心的构建信息，pipline类型流水线的实现为[WorkflowRun](https://javadoc.jenkins.io/plugin/workflow-job/org/jenkinsci/plugins/workflow/job/WorkflowRun.html) |
 
 [WorkflowRun](https://javadoc.jenkins.io/plugin/workflow-job/org/jenkinsci/plugins/workflow/job/WorkflowRun.html)**常用方法**
 
@@ -239,7 +239,7 @@ if (params.getOrDefault('BOOLEAN_PARAM_NAME', true)) {doSomething()}
 | ------------------------------------------------------------ | ------------------------------------------------------------ | -------------------------------------------- |
 | **[getId](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true#getId())**() | String                                                       | 获取构建号                                   |
 | **[getLog](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true#getLog())**() | String                                                       | （Deprecated）获取全部构建日志               |
-| **[getLog](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true#getLog(int))**(int maxLines) | `List<String>`                                               | 获取最多行数日志                             |
+| **[getLog](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true#getLog(int))**(int maxLines) | List< String>                                                | 获取最多行数日志                             |
 | **[getLogInputStream](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true#getLogInputStream())**() | [InputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/InputStream.html?is-external=true) | 获取日志文件的输入流                         |
 | **[getOneOffExecutor](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true#getOneOffExecutor())**() | [Executor](https://javadoc.jenkins.io/hudson/model/Executor.html) | 如果当前在构建中，则返回构建这个作业的执行器 |
 | **[getResult](https://javadoc.jenkins.io/hudson/model/Run.html?is-external=true#getResult())**() | [Result](https://javadoc.jenkins.io/hudson/model/Result.html) | 返回此次构建的结果                           |
@@ -262,6 +262,20 @@ if (params.getOrDefault('BOOLEAN_PARAM_NAME', true)) {doSomething()}
 | **[getChannel](https://javadoc.jenkins-ci.org/hudson/model/Computer.html#getChannel())**() | abstract hudson.remoting.VirtualChannel                      | 获取用来执行构建机器程序的通道 |
 | **[getTiedJobs](https://javadoc.jenkins-ci.org/hudson/model/Computer.html#getTiedJobs())**() | [List](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/List.html?is-external=true) < [AbstractProject](https://javadoc.jenkins-ci.org/hudson/model/AbstractProject.html) > | 获取绑定在此节点上的项目       |
 
+#### Executor
+
+可以通过这个类操作执行器信息。
+
+> 类api [hudson.model.Executor](https://javadoc.jenkins.io/hudson/model/Executor.html)
+
+**常用方法**
+
+| 方法名 | 返回值 | 说明 |
+| ------ | ------ | ---- |
+|        |        |      |
+|        |        |      |
+|        |        |      |
+
 
 
 #### FilePath
@@ -271,6 +285,8 @@ if (params.getOrDefault('BOOLEAN_PARAM_NAME', true)) {doSomething()}
 > 误区：直接使用File操作的文件是Jenkins master上的机器
 >
 > 类api [hudson.FilePath](https://javadoc.jenkins.io/hudson/FilePath.html)
+
+如下创建FilePath对象
 
 ```groovy
 import hudson.FilePath
@@ -282,7 +298,8 @@ def createFilePath(path) {
 	} else if (env['NODE_NAME'].equals("master")) {
 		return new FilePath(new File(path))
 	} else {
-		return new FilePath(Jenkins.get().getComputer(env['NODE_NAME']).getChannel(), path)
+    def computer = Jenkins.get().getComputer(env['NODE_NAME'])
+		return new FilePath(computer.getChannel(), path)
 	}
 }
 ```
@@ -337,6 +354,30 @@ def call(String path, String target) {
 ```
 
 
+
+### 3.4 执行groovy脚本
+
+可以通过`RemotingDiagnostics.executeGroovy()`执行groovy脚本
+
+**[executeGroovy](https://javadoc.jenkins.io/hudson/util/RemotingDiagnostics.html#executeGroovy(java.lang.String,hudson.remoting.VirtualChannel))**([String](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html?is-external=true) script, hudson.remoting.VirtualChannel channel)
+
+```groovy
+import hudson.util.RemotingDiagnostics
+
+/**
+ * 计算目录大小
+ * @param computer 执行机器
+ * @param path 文件夹路径
+ * @return
+ */
+def sizeOfDirectory(computer, String path) {
+    String buildScript = "org.apache.commons.io.FileUtils.sizeOfDirectory(new File(\"${path}\"))"
+    String result = RemotingDiagnostics.executeGroovy(buildScript, computer.getChannel())
+    // 返回的结果会以 "Result: " 为前缀
+    def size = result.replace("Result: ", "")
+    return Long.valueOf(size)
+}
+```
 
 
 
