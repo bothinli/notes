@@ -262,6 +262,7 @@ if (params.getOrDefault('BOOLEAN_PARAM_NAME', true)) {doSomething()}
 | **[getChannel](https://javadoc.jenkins-ci.org/hudson/model/Computer.html#getChannel())**() | abstract hudson.remoting.VirtualChannel                      | 获取用来执行构建机器程序的通道 |
 | **[getTiedJobs](https://javadoc.jenkins-ci.org/hudson/model/Computer.html#getTiedJobs())**() | [List](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/List.html?is-external=true) < [AbstractProject](https://javadoc.jenkins-ci.org/hudson/model/AbstractProject.html) > | 获取绑定在此节点上的项目       |
 | **[isUnix](https://javadoc.jenkins-ci.org/hudson/model/Computer.html#isUnix())**() | Boolean                                                      | 判断是否是unix机器             |
+| getAbsoluteRemoteFs()                                        | String                                                       | 获取远程构建机器工作根目录     |
 
 ```groovy
 // 获取当前构建机器实例
