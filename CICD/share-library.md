@@ -291,6 +291,23 @@ def getComputer() {
 | **[getCurrentWorkUnit](https://javadoc.jenkins.io/hudson/model/Executor.html#getCurrentWorkUnit())**() | [WorkUnit](https://javadoc.jenkins.io/hudson/model/queue/WorkUnit.html) | 返回目前正在执行的构建工作单元                      |
 | **[getCurrentExecutable](https://javadoc.jenkins.io/hudson/model/Executor.html#getCurrentExecutable())**() | [Queue.Executable](https://javadoc.jenkins.io/hudson/model/Queue.Executable.html) | Returns the current build this executor is running. |
 
+```groovy
+// 获取正在构建的流水线名称
+def getRunningPipelines(computer) {
+    def runningPipeline = new HashSet()   
+    for (item in computer.getExecutors()) {
+        if (item.isBusy()) {
+            // org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution.PlaceholderTask
+//            println item.getCurrentExecutable()
+            // org.jenkinsci.plugins.workflow.job.WorkflowJob
+            def job = item.getCurrentWorkUnit().work.getOwnerTask()
+            runningPipeline.add(job.getFullName())
+        }
+    }
+    return runningPipeline
+}
+```
+
 
 
 #### FilePath
