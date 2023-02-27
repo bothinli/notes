@@ -414,9 +414,29 @@ def sizeOfDirectory(computer, String path) {
 
 
 
+## 4. 进程内的脚本批准
+
+> https://www.jenkins.io/zh/doc/book/managing/script-approval/
+
+```groovy
+import org.jenkinsci.plugins.scriptsecurity.scripts.ScriptApproval
+
+ScriptApproval scriptApproval = ScriptApproval.get()
+def list = []
+for (Object it : scriptApproval.pendingScripts) {
+  list.add(it.hash)
+}
+
+for (String hash : list) {
+  println(hash)
+  scriptApproval.approveScript(hash);
+  scriptApproval.save()
+}
+```
 
 
-## 4. 参考
+
+## 5. 参考
 
 - [官方文档](https://www.jenkins.io/zh/doc/book/pipeline/shared-libraries/)
 
