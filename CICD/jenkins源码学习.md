@@ -49,4 +49,5 @@ yarn install
 ## 参考
 
 - [Learn Jenkins the hard way (1) - 从源码运行Jenkins开始](https://developer.aliyun.com/article/70440?spm=a2c6h.14164896.0.0.199a1859TSsIYV)
+- [Maven常用参数说明](https://www.jianshu.com/p/25aff2bf6e56)
 
