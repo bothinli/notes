@@ -18,10 +18,15 @@ import os
 end_mark = '<!-- end_toc -->'
 
 
-def get_file_toc_list(path):
+def get_file_toc_list(path, exclude_dir=None):
     """获得文件标题（.md文件链接 + .md文件内容的一级标题）"""
+    if exclude_dir is None:
+        exclude_dir = []
     file_toc_list = []
     for file_name in os.listdir(path):
+        if file_name in exclude_dir:
+            continue
+
         url_path = file_name.replace(os.sep, '/')
         if path != '.':
             url_path = os.path.join(path, url_path)
@@ -76,7 +81,7 @@ def alter_readme_toc(file, new_h1_list):
 
 def main():
     readme_filename = 'README.md' if 'README.md' in os.listdir('.') else 'readme.md'
-    file_toc_list = get_file_toc_list('.')
+    file_toc_list = get_file_toc_list('.', exclude_dir=["拉勾讲义"])
     for _ in file_toc_list:
         print(_)
 
