@@ -50,5 +50,9 @@ yarn install
 
 - [Learn Jenkins the hard way (1) - 从源码运行Jenkins开始](https://developer.aliyun.com/article/70440?spm=a2c6h.14164896.0.0.199a1859TSsIYV)
 - [Maven常用参数说明](https://www.jianshu.com/p/25aff2bf6e56)
-- [Jenkins任务调度源码简要分析](https://wenku.baidu.com/view/30228407bfd126fff705cc1755270722192e5983.html?_wkts_=1680701719755&bdQuery=jenkins+%E6%BA%90%E7%A0%81)
+- [Jenkins任务调度源码简要分析](https://blog.csdn.net/qq_43509535/article/details/121030971)
+- [Jenkins 一致性Hash节点调度](https://blog.csdn.net/west_609/article/details/103946448)
+- [[ 源码解析 ] Jenkins 的调度过程以及相关组件的源码解读](https://nagle.top/2020/11/02/Jenkins-Queue-Arch.html)
+- [stapler (github)](https://github.com/jenkinsci/stapler)
+- [jenkins源码阅读：启动和请求处理](https://myzhan.github.io/post/jenkins-src-entry-point/)
 
