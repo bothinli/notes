@@ -2,7 +2,7 @@ window.$docsify = {
   name: "这人有点东西",
   repo: "true",
   corner: {
-    url: "https://github.com/bothinli/note/tree/master/docs",
+    url: "https://github.com/bothinli/notes/tree/master/docs",
     icon: "github"
   },
   pagination: {
@@ -20,6 +20,7 @@ window.$docsify = {
       label: "警告"
     }
   },
+  loadNavbar: true,
   loadSidebar: true,
   alias: {
     '/.*/_sidebar.md': '/_sidebar.md', //do not request sidebar from subdirectories
@@ -27,11 +28,11 @@ window.$docsify = {
   subMaxLevel: 3,
   sidebarDisplayLevel: 1, // set sidebar display level
   autoHeader: true,
-  coverpage: true,
+  coverpage: false,
   auto2top: true,
   plugins: [
     EditOnGithubPlugin.create(
-      "https://github.com/bothinli/note/tree/master/docs/",
+      "https://github.com/bothinli/notes/blob/master/docs/",
       null,
       "Edit on github"
     ),

@@ -27,7 +27,7 @@ class Generator:
             if os.path.isdir(url_path):
                 tmp_lst = cls.get_file_toc_list(url_path, lstrip_path=lstrip_path)
                 if tmp_lst:
-                    file_toc_list.append(f"{' ' * 2 * url_path.count(os.sep)}" + f'- [{file_name}]({link_url})')
+                    file_toc_list.append(f"{' ' * 2 * url_path.count(os.sep)}" + f'- {file_name}')
                     file_toc_list.extend(tmp_lst)
                 continue
 
@@ -80,7 +80,7 @@ class Generator:
 
 
 def main():
-    Generator.generate("docs", "docs/_sidebar.md", exclude_dir=["拉勾讲义"], lstrip_path="docs")
+    Generator.generate("docs", "docs/_navbar.md", exclude_dir=["拉勾讲义", "README.md"], lstrip_path="docs")
 
 
 if __name__ == '__main__':
