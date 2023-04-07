@@ -22,5 +22,5 @@
     - [DjangoRESTFramework总结](/Django/DjangoRESTFramework总结.md)
 <!-- end_toc -->
   - 其他
-    - [DRF gitbook](Django/Django教程笔记/Django框架基础-讲义02/index.html)
-    - [Django gitbook](Django/Django教程笔记/Django框架基础-讲义02/index.html)
+    - [DRF gitbook](https://bothinli.github.io/notes/Django/Django教程笔记/Django框架基础-讲义02/index.html)
+    - [Django gitbook](https://bothinli.github.io/notes/Django/Django教程笔记/Django框架基础-讲义02/index.html)
