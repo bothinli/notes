@@ -79,17 +79,20 @@ def alter_readme_toc(file, new_h1_list):
         f.write(content)
 
 
-def main():
-    readme_filename = 'README.md' if 'README.md' in os.listdir('.') else 'readme.md'
-    file_toc_list = get_file_toc_list('.', exclude_dir=["拉勾讲义"])
+def main(search_dir, generate_file_path=None, exclude_dir=None):
+    if generate_file_path is None:
+        generate_file_path = 'README.md' if 'README.md' in os.listdir('.') else 'readme.md'
+
+    file_toc_list = get_file_toc_list(search_dir, exclude_dir=exclude_dir)
     for _ in file_toc_list:
         print(_)
 
-    print(f'alter toc in {readme_filename} after last ---')
+    print(f'alter toc in {generate_file_path} after last ---')
 
-    alter_readme_toc(readme_filename, file_toc_list)
+    alter_readme_toc(generate_file_path, file_toc_list)
     print('finished')
 
 
 if __name__ == '__main__':
-    main()
+    # main("docs", exclude_dir=["拉勾讲义"])
+    main("docs", "docs/_sidebar.md", exclude_dir=["拉勾讲义"])
