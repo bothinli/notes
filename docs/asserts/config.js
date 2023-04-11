@@ -1,10 +1,12 @@
 window.$docsify = {
   name: "这人有点东西",
   repo: "true",
-  corner: {
-    url: "https://github.com/bothinli/notes/tree/master/docs",
-    icon: "github"
-  },
+  // corner: {
+  //   url: "https://github.com/bothinli/notes/tree/master/docs",
+  //   icon: "github"
+  // },
+  // themeColor: '#3F51B5',
+  // routerMode: 'history',
   pagination: {
     crossChapter: true
   },

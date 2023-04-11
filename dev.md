@@ -9,7 +9,7 @@
 ## 本地编写
 - clone 本项目到本地
   ```sh
-    git clone https://github.com/bothinli/note.git
+    git clone https://github.com/bothinli/notes.git
   ```
 - 修改docs文件夹内的 markdown文件后，启动本地服务器预览
 	```sh
