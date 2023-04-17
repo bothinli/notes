@@ -436,7 +436,29 @@ for (String hash : list) {
 
 
 
-## 5. 参考
+## 5. 常见问题
+
+### 5.1 NonCPS
+
+
+标有 `@NonCPS` 注解的任何方法，不经过 CPS 转换
+
+```groovy
+import com.cloudbees.groovy.cps.NonCPS
+
+
+@NonCPS
+def testMethod() {
+}
+```
+
+> jar包地址：[groovy-cps](https://mvnrepository.com/artifact/com.cloudbees/groovy-cps/1.24)
+>
+> [什么是CPS编程](https://blog.csdn.net/jaytalent/article/details/105425616)
+
+
+
+## 99. 参考
 
 - [官方文档](https://www.jenkins.io/zh/doc/book/pipeline/shared-libraries/)
 
