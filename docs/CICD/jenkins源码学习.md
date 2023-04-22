@@ -126,7 +126,7 @@ doIndex: 处理/myservice请求，返回一个Jelly模板渲染的响应。
 
 ## 3. jenkins核心注解和类
 
-以下是 Jenkins 中常用的注解及其用法：
+### 3.1 Jenkins 中常用的注解及其用法
 
 @Extension: 标注扩展点的实现类。Jenkins 中有很多扩展点，如 SCM、构建后操作等，如果要实现扩展点，需要创建实现类并标注该注解；
 
@@ -166,65 +166,98 @@ doIndex: 处理/myservice请求，返回一个Jelly模板渲染的响应。
 
 @Localized: 标注本地化。可以为 Jenkins 插件添加本地化支持
 
-以上是 Jenkins 中常用的注解及其用法，它们可以方便地扩展 Jenkins 的功能，实现更加灵活和自动化的操作。
+
+
+### 3.2 Jenkins 中核心类及其用法
+
+1. hudson.model.AbstractProject: 抽象类，表示 Jenkins 中的一个项目。通过该类可以获取项目的各种属性，如构建历史、构建环境等；
+
+2. hudson.model.Build: 表示 Jenkins 中的一个构建。通过该类可以获取构建的各种属性，如构建编号、持续时间、状态等；
+
+3. hudson.model.BuildListener: 表示构建监听器。当构建开始、结束、产生输出等事件时，会触发该监听器中的相应方法；
+
+4. hudson.model.Cause: 表示 Jenkins 中的一个构建原因。Jenkins 中有很多构建原因，如用户手动触发构建、定时触发构建、SCM 变更触发构建等。通过该类可以获取构建原因的各种属性，如描述、用户、时间等；
+
+5. hudson.model.Computer: 表示 Jenkins 中的一个计算机。通过该类可以获取计算机的各种属性，如节点名称、节点描述、在线状态等；
+
+6. hudson.model.Executor: 表示 Jenkins 中的一个执行器。每个执行器都会运行一个构建，通过该类可以获取执行器的各种属性，如进程 ID、当前构建等；
+
+7. hudson.model.Item: 抽象类，表示 Jenkins 中的一个项目或节点。通过该类可以获取项目或节点的各种属性，如名称、描述、权限等；
+
+8. hudson.model.Job: 抽象类，表示 Jenkins 中的一个任务。通过该类可以获取任务的各种属性，如构建历史、构建环境等；
+
+9. hudson.model.Label: 表示 Jenkins 中的一个标签。通过该类可以获取标签的各种属性，如名称、描述等；
+
+10. hudson.model.LabelExpression: 表示 Jenkins 中的一个标签表达式。通过该类可以创建标签表达式，如 node('linux && x86_64')；
+
+11. hudson.model.Node: 抽象类，表示 Jenkins 中的一个节点。通过该类可以获取节点的各种属性，如名称、描述、标签等；
+
+12. hudson.model.ParametersAction: 表示 Jenkins 中的一个构建参数。通过该类可以获取构建参数的各种属性，如名称、值等；
+
+13. hudson.model.Run: 抽象类，表示 Jenkins 中的一个构建或者一个部署。通过该类可以获取构建或部署的各种属性，如构建编号、持续时间、状态等；
+
+14. hudson.model.TaskListener: 表示任务监听器。当任务开始、结束、产生输出等事件时，会触发该监听器中的相应方法；
+
+15. hudson.model.User: 表示 Jenkins 中的一个用户。通过该类可以获取用户的各种属性，如用户名、邮箱、密码等；
+
+16. hudson.model.View: 抽象类，表示 Jenkins 中的一个视图。通过该类可以获取视图的各种属性，如名称、描述、项目列表等；
+
+17. hudson.scm.SCM: 抽象类，表示 Jenkins 中
+
+18. Hudson：Jenkins 的核心类，包含了所有 Jenkins 系统的配置和状态，它是 Jenkins 服务中的单例对象。
+
+19. Jenkins：Hudson 类的别名，是为了向后兼容而保留的。
+
+20. Run：Jenkins 中表示一个构建或者一个构建的一次运行。它包含了构建的状态和结果、构建的日志信息等。
+
+21. Build：Run 的子类，表示一个构建，包含了构建的一些特定信息，如构建编号、构建时间、构建状态等。
+
+22. FreeStyleProject：Jenkins 中的一个自由风格项目，是 Jenkins 中最常用的项目类型之一。它可以执行 Shell 脚本、Windows 批处理脚本、Ant、Maven 等构建命令。
+
+23. AbstractProject：FreeStyleProject 的父类，定义了 Jenkins 中所有项目的一些基本属性和行为，如 SCM 工具、构建触发器、构建后操作等。
+
+24. Job：AbstractProject 的子类，表示一个抽象的项目或作业，可以是自由风格项目、Maven 项目、多分支流水线项目等。
+
+
+### 3.3  Describable接口和Descriptor类 
+
+Describable接口和Descriptor类是用于实现可描述对象的封装和提供描述信息的类。
+
+具体来说，当您想要创建一个可描述对象时，需要让该对象实现Describable接口，并且为该对象编写Descriptor类。其中，Describable接口定义了一个名为“getDescriptor”的方法，它返回Descriptor对象，而Descriptor类则负责提供有关Describable对象的元数据信息。
+
+#### 主要功能
+
+1. Describable接口
+
+Describable接口是所有可描述对象的基本接口。当您的类需要拥有描述信息时，请让该类实现Describable接口。此外，您还需要为该类提供一个Descriptor类，以便外部用户能够获取该类的元数据信息。
+
+2. Descriptor类
+
+Descriptor类是用于提供Describable对象的元数据信息的类。每个Describable对象都有一个对应的Descriptor对象，它包含该对象的一些信息，例如该对象支持哪些参数、如何验证这些参数、如何显示该对象等等。因此，Descriptor类常常被用于定义各种插件、构建器、触发器、发布者等Jenkins扩展点的元数据信息。
+
+总之，Describable接口和Descriptor类是Jenkins中非常重要的两个类，它们为Jenkins扩展点提供了一种标准化的描述方式，使得Jenkins的插件和其他扩展点更加易用和可扩展。
 
 
 
-Jenkins 中一些核心类及其用法：
+#### 实现类的示例
 
-hudson.model.AbstractProject: 抽象类，表示 Jenkins 中的一个项目。通过该类可以获取项目的各种属性，如构建历史、构建环境等；
+1. SCM（Source Control Management）类
 
-hudson.model.Build: 表示 Jenkins 中的一个构建。通过该类可以获取构建的各种属性，如构建编号、持续时间、状态等；
+SCM类是Jenkins中用于管理源代码控制系统的抽象类，该类实现了Describable接口，并且提供了一个Descriptor类。 Descriptor类为用户提供了设置SCM相关参数的界面，并验证这些参数是否合法。
 
-hudson.model.BuildListener: 表示构建监听器。当构建开始、结束、产生输出等事件时，会触发该监听器中的相应方法；
+2. BuildWrapper类
 
-hudson.model.Cause: 表示 Jenkins 中的一个构建原因。Jenkins 中有很多构建原因，如用户手动触发构建、定时触发构建、SCM 变更触发构建等。通过该类可以获取构建原因的各种属性，如描述、用户、时间等；
+BuildWrapper类是Jenkins中用于包装构建过程的抽象类，该类同样实现了Describable接口，并提供了相应的Descriptor类。 Descriptor类可以为用户提供一些选项来影响构建行为，例如，您可以在Descriptor类中定义一个“超时”选项，以设定构建过程最长执行时间。
 
-hudson.model.Computer: 表示 Jenkins 中的一个计算机。通过该类可以获取计算机的各种属性，如节点名称、节点描述、在线状态等；
+3. Publisher类
 
-hudson.model.Executor: 表示 Jenkins 中的一个执行器。每个执行器都会运行一个构建，通过该类可以获取执行器的各种属性，如进程 ID、当前构建等；
+Publisher类是Jenkins中用于发布构建结果的抽象类，也实现了Describable接口，同时也有相应的Descriptor类。 Descriptor类可以允许用户配置不同类型的构建后操作，例如发送电子邮件、上传构建结果等等。
 
-hudson.model.Item: 抽象类，表示 Jenkins 中的一个项目或节点。通过该类可以获取项目或节点的各种属性，如名称、描述、权限等；
+4. Trigger类
 
-hudson.model.Job: 抽象类，表示 Jenkins 中的一个任务。通过该类可以获取任务的各种属性，如构建历史、构建环境等；
+Trigger类是Jenkins中用于触发构建过程的抽象类，同样实现了Describable接口并提供相应的Descriptor类。 Descriptor类可以允许用户配置何时触发构建过程，例如，基于定期或者代码仓库更新等条件。
 
-hudson.model.Label: 表示 Jenkins 中的一个标签。通过该类可以获取标签的各种属性，如名称、描述等；
-
-hudson.model.LabelExpression: 表示 Jenkins 中的一个标签表达式。通过该类可以创建标签表达式，如 node('linux && x86_64')；
-
-hudson.model.Node: 抽象类，表示 Jenkins 中的一个节点。通过该类可以获取节点的各种属性，如名称、描述、标签等；
-
-hudson.model.ParametersAction: 表示 Jenkins 中的一个构建参数。通过该类可以获取构建参数的各种属性，如名称、值等；
-
-hudson.model.Run: 抽象类，表示 Jenkins 中的一个构建或者一个部署。通过该类可以获取构建或部署的各种属性，如构建编号、持续时间、状态等；
-
-hudson.model.TaskListener: 表示任务监听器。当任务开始、结束、产生输出等事件时，会触发该监听器中的相应方法；
-
-hudson.model.User: 表示 Jenkins 中的一个用户。通过该类可以获取用户的各种属性，如用户名、邮箱、密码等；
-
-hudson.model.View: 抽象类，表示 Jenkins 中的一个视图。通过该类可以获取视图的各种属性，如名称、描述、项目列表等；
-
-hudson.scm.SCM: 抽象类，表示 Jenkins 中
-
-
-
-以下是 Jenkins 中一些其他重要的核心类：
-
-Hudson：Jenkins 的核心类，包含了所有 Jenkins 系统的配置和状态，它是 Jenkins 服务中的单例对象。
-
-Jenkins：Hudson 类的别名，是为了向后兼容而保留的。
-
-Run：Jenkins 中表示一个构建或者一个构建的一次运行。它包含了构建的状态和结果、构建的日志信息等。
-
-Build：Run 的子类，表示一个构建，包含了构建的一些特定信息，如构建编号、构建时间、构建状态等。
-
-FreeStyleProject：Jenkins 中的一个自由风格项目，是 Jenkins 中最常用的项目类型之一。它可以执行 Shell 脚本、Windows 批处理脚本、Ant、Maven 等构建命令。
-
-AbstractProject：FreeStyleProject 的父类，定义了 Jenkins 中所有项目的一些基本属性和行为，如 SCM 工具、构建触发器、构建后操作等。
-
-Job：AbstractProject 的子类，表示一个抽象的项目或作业，可以是自由风格项目、Maven 项目、多分支流水线项目等。
-
-这些类都是 Jenkins 中非常重要的核心类，开发者在编写 Jenkins 插件或自定义 Jenkins 功能时会经常用到它们。
+总之，Jenkins中很多扩展点都依赖于Describable接口和Descriptor类，以提供一种标准化的描述方式和用户界面，使得插件或其他扩展点更加易用和可扩展。
 
 
 
