@@ -271,4 +271,5 @@ Trigger类是Jenkins中用于触发构建过程的抽象类，同样实现了Des
 - [[ 源码解析 ] Jenkins 的调度过程以及相关组件的源码解读](https://nagle.top/2020/11/02/Jenkins-Queue-Arch.html)
 - [stapler (github)](https://github.com/jenkinsci/stapler)
 - [jenkins源码阅读：启动和请求处理](https://myzhan.github.io/post/jenkins-src-entry-point/)
+- [Jenkins中Jelly基础、超链接、国际化](https://www.cnblogs.com/pixy/p/5020327.html)
 

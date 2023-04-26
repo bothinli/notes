@@ -2,7 +2,6 @@
     - [正则表达式](/python/正则表达式.md)
   - 部署学习
     - [nginx](/部署学习/nginx.md)
-  - [README](/README.md)
   - CICD
     - [Kubernetes](/CICD/Kubernetes.md)
     - [jenkins源码学习](/CICD/jenkins源码学习.md)
@@ -19,13 +18,7 @@
   - Django
     - [Django基础学习笔记](/Django/Django基础学习笔记.md)
     - [django目录结构建议](/Django/django目录结构建议.md)
-    - Django教程笔记
-      - Django框架基础-讲义02
-        - C05-Components
-          - [Versioning](/Django/Django教程笔记/Django框架基础-讲义02/C05-Components/Versioning.md)
-      - Django框架基础-讲义01
-        - C06-Database
-          - [Manager](/Django/Django教程笔记/Django框架基础-讲义01/C06-Database/Manager.md)
+    - [DjangoAdmin使用](/Django/DjangoAdmin使用.md)
     - [Django集成任务队列Celery](/Django/Django集成任务队列Celery.md)
     - [DjangoRESTFramework总结](/Django/DjangoRESTFramework总结.md)
 <!-- end_toc -->

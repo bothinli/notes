@@ -81,6 +81,7 @@ class Generator:
 
 def main():
     Generator.generate("docs", "docs/_navbar.md", exclude_dir=["拉勾讲义", "README.md"], lstrip_path="docs")
+    Generator.generate("docs", "docs/README.md", exclude_dir=["拉勾讲义", "README.md"], lstrip_path="docs")
 
 
 if __name__ == '__main__':
