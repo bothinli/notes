@@ -11,6 +11,8 @@
     - [jenkins-install](/CICD/jenkins-install.md)
     - [DevOps学习笔记](/CICD/DevOps学习笔记.md)
     - [Docker笔记](/CICD/Docker笔记.md)
+  - 线上问题
+    - [慢查询导致服务无法响应](/线上问题/慢查询导致服务无法响应.md)
   - Linux
     - [Mac快捷键](/Linux/Mac快捷键.md)
     - [Linux学习笔记](/Linux/Linux学习笔记.md)
